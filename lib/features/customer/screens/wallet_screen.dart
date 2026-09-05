@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../providers/wallet_provider.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -16,7 +18,6 @@ class _WalletScreenState extends State<WalletScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _balanceCtrl;
   late Animation<double> _balanceAnim;
-  final double _balance = 320.0;
 
   @override
   void initState() {
@@ -36,12 +37,13 @@ class _WalletScreenState extends State<WalletScreen>
 
   @override
   Widget build(BuildContext context) {
+    final wallet = context.watch<WalletProvider>();
     return Scaffold(
       backgroundColor: AppColors.background,
       body: CustomScrollView(
         slivers: [
           // Wallet header
-          SliverToBoxAdapter(child: _WalletHeader(balance: _balance, anim: _balanceAnim)),
+          SliverToBoxAdapter(child: _WalletHeader(balance: wallet.balance, anim: _balanceAnim)),
 
           // Quick add amounts
           SliverToBoxAdapter(
@@ -70,14 +72,14 @@ class _WalletScreenState extends State<WalletScreen>
             ),
           ),
 
-          // Transaction list
+          // Transaction list — real data from WalletProvider
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (_, i) => Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: _TransactionTile(tx: _transactions[i]),
+                child: _TransactionTile(tx: _txFrom(wallet.transactions[i])),
               ),
-              childCount: _transactions.length,
+              childCount: wallet.transactions.length,
             ),
           ),
 
@@ -85,6 +87,40 @@ class _WalletScreenState extends State<WalletScreen>
         ],
       ),
     );
+  }
+
+  // Map a WalletTransaction to the tile's display model
+  _Tx _txFrom(WalletTransaction t) {
+    IconData icon;
+    if (t.label.contains('Added')) {
+      icon = Icons.add_circle_rounded;
+    } else if (t.label.contains('Parcel')) {
+      icon = Icons.inventory_2_rounded;
+    } else if (t.label.contains('Referral') || t.label.contains('Bonus')) {
+      icon = Icons.card_giftcard_rounded;
+    } else if (t.label.contains('Withdraw')) {
+      icon = Icons.arrow_upward_rounded;
+    } else {
+      icon = Icons.electric_bike_rounded;
+    }
+    final sign = t.isCredit ? '+' : '-';
+    return _Tx(
+      t.label,
+      '$sign₹${t.amount.abs()}',
+      _formatTime(t.time),
+      icon,
+      t.isCredit ? AppColors.success : AppColors.error,
+      t.isCredit,
+    );
+  }
+
+  String _formatTime(DateTime dt) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun',
+                    'Jul','Aug','Sep','Oct','Nov','Dec'];
+    final h = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+    final m = dt.minute.toString().padLeft(2, '0');
+    final ampm = dt.hour >= 12 ? 'PM' : 'AM';
+    return '${dt.day} ${months[dt.month - 1]}, $h:$m $ampm';
   }
 
   void _showAddMoney(double amount) {
@@ -96,16 +132,6 @@ class _WalletScreenState extends State<WalletScreen>
       builder: (_) => _AddMoneySheet(initialAmount: amount),
     );
   }
-
-  static final _transactions = [
-    _Tx('Added Money', '+₹200', '09 May, 10:33 AM', Icons.add_circle_rounded, AppColors.success, true),
-    _Tx('Ride Payment', '-₹45', '09 May, 09:15 AM', Icons.electric_bike_rounded, AppColors.error, false),
-    _Tx('Ride Payment', '-₹45', '08 May, 05:40 PM', Icons.electric_bike_rounded, AppColors.error, false),
-    _Tx('Parcel Payment', '-₹60', '07 May, 02:20 PM', Icons.inventory_2_rounded, AppColors.error, false),
-    _Tx('Added Money', '+₹100', '05 May, 11:00 AM', Icons.add_circle_rounded, AppColors.success, true),
-    _Tx('Referral Bonus', '+₹50', '03 May, 08:30 AM', Icons.card_giftcard_rounded, AppColors.success, true),
-    _Tx('Ride Payment', '-₹30', '01 May, 07:45 PM', Icons.electric_bike_rounded, AppColors.error, false),
-  ];
 }
 
 class _WalletHeader extends StatelessWidget {
@@ -322,6 +348,7 @@ class _AddMoneySheet extends StatefulWidget {
 
 class _AddMoneySheetState extends State<_AddMoneySheet> {
   late TextEditingController _ctrl;
+  bool _paying = false;
 
   @override
   void initState() {
@@ -334,6 +361,27 @@ class _AddMoneySheetState extends State<_AddMoneySheet> {
   void dispose() {
     _ctrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _proceed() async {
+    final amount = int.tryParse(_ctrl.text) ?? 0;
+    if (amount <= 0) return;
+    setState(() => _paying = true);
+
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final ok = await context.read<WalletProvider>().addMoney(amount);
+
+    if (!mounted) return;
+    setState(() => _paying = false);
+    navigator.pop();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(ok ? '₹$amount added to wallet' : 'Payment failed'),
+        backgroundColor: ok ? AppColors.success : AppColors.error,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -374,8 +422,8 @@ class _AddMoneySheetState extends State<_AddMoneySheet> {
             ),
             const SizedBox(height: 20),
             AppGradientButton(
-              label: 'Proceed to Pay',
-              onTap: () => Navigator.pop(context),
+              label: _paying ? 'Processing...' : 'Proceed to Pay',
+              onTap: _paying ? null : _proceed,
             ),
           ],
         ),

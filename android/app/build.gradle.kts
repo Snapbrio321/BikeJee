@@ -27,6 +27,13 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Google Maps API key — read from gradle property or env, empty by default.
+        // Provide at build time:  flutter build apk -Pmaps.key=YOUR_KEY
+        val mapsKey = (project.findProperty("maps.key") as String?)
+            ?: System.getenv("MAPS_API_KEY")
+            ?: ""
+        manifestPlaceholders["MAPS_API_KEY"] = mapsKey
     }
 
     buildTypes {

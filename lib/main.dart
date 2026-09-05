@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
+import 'providers/auth_provider.dart';
+import 'providers/location_provider.dart';
+import 'providers/ride_provider.dart';
+import 'providers/wallet_provider.dart';
+import 'providers/bookings_provider.dart';
 import 'features/auth/screens/splash_screen.dart';
 import 'features/auth/screens/onboarding_screen.dart';
 import 'features/auth/screens/role_select_screen.dart';
@@ -29,11 +35,20 @@ class BikeJeeApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'BikeJee',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      home: const AppNavigator(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()..bootstrap()),
+        ChangeNotifierProvider(create: (_) => LocationProvider()..fetchOnce()),
+        ChangeNotifierProvider(create: (_) => RideProvider()),
+        ChangeNotifierProvider(create: (_) => WalletProvider()..load()),
+        ChangeNotifierProvider(create: (_) => BookingsProvider()..load()),
+      ],
+      child: MaterialApp(
+        title: 'BikeJee',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        home: const AppNavigator(),
+      ),
     );
   }
 }
@@ -53,6 +68,21 @@ class _AppNavigatorState extends State<AppNavigator> {
   _AppScreen _screen = _AppScreen.splash;
   String _role = '';
   String _phone = '';
+
+  Future<void> _logout() async {
+    await context.read<AuthProvider>().logout();
+    if (mounted) _go(_AppScreen.roleSelect);
+  }
+
+  // After splash: if a session was restored, jump straight into the app.
+  void _afterSplash() {
+    final auth = context.read<AuthProvider>();
+    if (auth.isAuthenticated) {
+      _go(auth.isDriver ? _AppScreen.driverHome : _AppScreen.customerHome);
+    } else {
+      _go(_AppScreen.onboarding);
+    }
+  }
 
   void _go(_AppScreen s) => setState(() => _screen = s);
 
@@ -94,7 +124,7 @@ class _AppNavigatorState extends State<AppNavigator> {
   Widget _buildScreen() {
     switch (_screen) {
       case _AppScreen.splash:
-        return SplashScreen(onDone: () => _go(_AppScreen.onboarding));
+        return SplashScreen(onDone: _afterSplash);
 
       case _AppScreen.onboarding:
         return OnboardingScreen(onDone: () => _go(_AppScreen.roleSelect));
@@ -144,14 +174,10 @@ class _AppNavigatorState extends State<AppNavigator> {
         );
 
       case _AppScreen.customerHome:
-        return CustomerShell(
-          onLogout: () => _go(_AppScreen.roleSelect),
-        );
+        return CustomerShell(onLogout: _logout);
 
       case _AppScreen.driverHome:
-        return DriverShell(
-          onLogout: () => _go(_AppScreen.roleSelect),
-        );
+        return DriverShell(onLogout: _logout);
     }
   }
 }

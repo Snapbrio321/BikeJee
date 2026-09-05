@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/widgets/app_bottom_nav.dart';
+import '../../../data/models/place_model.dart';
+import '../../../providers/ride_provider.dart';
+import '../../../providers/bookings_provider.dart';
 import 'home_screen.dart';
 import 'my_bookings_screen.dart';
 import 'wallet_screen.dart';
@@ -30,7 +34,7 @@ class _CustomerShellState extends State<CustomerShell> {
 
   /// Carries context through the flow (service type + destination)
   String _bookingService     = 'Bike';
-  String _bookingDestination = '';
+  String _bookingDestination = '';   // display name for the book screen
 
   /// Back-navigation history stack
   final List<String> _history = [];
@@ -57,10 +61,21 @@ class _CustomerShellState extends State<CustomerShell> {
     });
   }
 
-  // Called from HomeScreen when user taps a place suggestion
-  void _startBooking(String service, String destination) {
+  // On "Done": save the completed ride to bookings history, then reset.
+  void _finishRide() {
+    final ride = context.read<RideProvider>();
+    if (ride.activeRide != null) {
+      context.read<BookingsProvider>().addCompleted(ride.activeRide!);
+    }
+    ride.reset();
+    _resetFlow();
+  }
+
+  // Called from HomeScreen when user taps a place suggestion.
+  // The resolved PlaceModel (with coords) is already in RideProvider.setDrop.
+  void _startBooking(String service, PlaceModel destination) {
     _bookingService     = service;
-    _bookingDestination = destination;
+    _bookingDestination = destination.name;
     if (service == 'Parcel') {
       _navigate('parcel');
     } else {
@@ -89,7 +104,7 @@ class _CustomerShellState extends State<CustomerShell> {
           onCancelled:     _resetFlow,
         );
       case 'completed':
-        return RideCompletedScreen(onDone: _resetFlow);
+        return RideCompletedScreen(onDone: _finishRide);
 
       // ── Parcel flow ─────────────────────────────────────────────────────
       case 'parcel':

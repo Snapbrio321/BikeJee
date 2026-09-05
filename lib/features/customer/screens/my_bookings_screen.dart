@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/rating_stars.dart';
+import '../../../data/models/ride_model.dart';
+import '../../../providers/bookings_provider.dart';
 
 class MyBookingsScreen extends StatefulWidget {
   const MyBookingsScreen({super.key});
@@ -113,76 +116,50 @@ class _BookingList extends StatelessWidget {
   final String filter;
   const _BookingList({required this.filter});
 
-  static final _allBookings = [
-    _Booking(
-      id: '#BJ001',
-      type: 'bike',
-      from: 'Koramangala, Bangalore',
-      to: 'MG Road, Bangalore',
-      date: 'Today',
-      time: '10:32 AM',
-      fare: '₹45',
-      status: 'completed',
-      driver: 'Arjun Kumar',
-      rating: 4.8,
-    ),
-    _Booking(
-      id: '#BJ002',
-      type: 'auto',
-      from: 'Indiranagar → Airport',
-      to: 'Kempegowda Airport',
-      date: 'Yesterday',
-      time: '08:45 PM',
-      fare: '₹210',
-      status: 'completed',
-      driver: 'Ravi Sharma',
-      rating: 4.5,
-    ),
-    _Booking(
-      id: '#BJ003',
-      type: 'bike',
-      from: 'HSR Layout → BTM Layout',
-      to: 'BTM Layout',
-      date: 'Yesterday',
-      time: '04:20 PM',
-      fare: '₹60',
-      status: 'cancelled',
-      driver: 'Deepak Kumar',
-      rating: 0,
-    ),
-    _Booking(
-      id: '#BJ004',
-      type: 'parcel',
-      from: 'Koramangala',
-      to: 'HSR Layout → BTM Layout',
-      date: '22 May, 09:18 AM',
-      time: '09:18 AM',
-      fare: '₹50',
-      status: 'completed',
-      driver: 'Suresh K',
-      rating: 5.0,
-    ),
-    _Booking(
-      id: '#BJ005',
-      type: 'bike',
-      from: 'Whitefield',
-      to: 'Electronic City',
-      date: '20 May',
-      time: '07:30 AM',
-      fare: '₹120',
-      status: 'completed',
-      driver: 'Manoj B',
-      rating: 4.2,
-    ),
-  ];
+  // Map a RideModel from BookingsProvider into the display model
+  _Booking _fromRide(RideModel r) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun',
+                    'Jul','Aug','Sep','Oct','Nov','Dec'];
+    final dt = r.createdAt ?? DateTime.now();
+    final now = DateTime.now();
+    String date;
+    if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
+      date = 'Today';
+    } else if (now.difference(dt).inDays == 1) {
+      date = 'Yesterday';
+    } else {
+      date = '${dt.day} ${months[dt.month - 1]}';
+    }
+    final h = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
+    final m = dt.minute.toString().padLeft(2, '0');
+    final time = '$h:$m ${dt.hour >= 12 ? "PM" : "AM"}';
 
-  List<_Booking> get _filtered => filter == 'all'
-      ? _allBookings
-      : _allBookings.where((b) => b.type == filter).toList();
+    return _Booking(
+      id: r.id,
+      type: r.serviceType.name,
+      from: r.pickup.name,
+      to: r.drop.name,
+      date: date,
+      time: time,
+      fare: '₹${r.fare}',
+      status: r.status.name,
+      driver: '',
+      rating: r.rating ?? 0,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final items = _filtered;
+    final provider = context.watch<BookingsProvider>();
+    if (provider.loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    ServiceType? typeFilter;
+    if (filter == 'bike') typeFilter = ServiceType.bike;
+    if (filter == 'parcel') typeFilter = ServiceType.parcel;
+
+    final items = provider.byService(typeFilter).map(_fromRide).toList();
     if (items.isEmpty) {
       return _EmptyState(filter: filter);
     }

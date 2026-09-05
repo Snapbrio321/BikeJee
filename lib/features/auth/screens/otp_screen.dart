@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/widgets/app_button.dart';
+import '../../../providers/auth_provider.dart';
 
 class OtpScreen extends StatefulWidget {
   final String phone;
@@ -94,18 +96,19 @@ class _OtpScreenState extends State<OtpScreen>
   void _verify() async {
     if (_otp.length != 4) return;
     setState(() { _isLoading = true; _isError = false; });
-    await Future.delayed(const Duration(milliseconds: 1200));
-    if (!mounted) return;
 
-    // Demo: accept any 4 digits except "0000"
-    if (_otp == '0000') {
+    // Real verification through AuthProvider (mock-mode accepts any 4-digit != 0000)
+    final ok = await context.read<AuthProvider>().verifyOtp(_otp);
+
+    if (!mounted) return;
+    if (ok) {
+      setState(() => _isLoading = false);
+      widget.onVerified();
+    } else {
       setState(() { _isLoading = false; _isError = true; });
       _shakeCtrl.forward(from: 0);
       for (final c in _controllers) { c.clear(); }
       if (mounted) FocusScope.of(context).requestFocus(_focusNodes[0]);
-    } else {
-      setState(() => _isLoading = false);
-      widget.onVerified();
     }
   }
 
@@ -270,9 +273,20 @@ class _OtpScreenState extends State<OtpScreen>
                             .copyWith(color: AppColors.textLight),
                       )
                     : GestureDetector(
-                        onTap: () {
+                        onTap: () async {
                           setState(() => _resendSeconds = 30);
                           _startResendTimer();
+                          final messenger = ScaffoldMessenger.of(context);
+                          final auth = context.read<AuthProvider>();
+                          await auth.sendOtp(widget.phone);
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('OTP resent to +91 ${widget.phone}'),
+                              backgroundColor: AppColors.primary,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
                         },
                         child: Text('Resend OTP',
                             style: AppTextStyles.bodyMdOrange),

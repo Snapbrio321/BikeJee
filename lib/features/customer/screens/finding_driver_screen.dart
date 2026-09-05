@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_map_placeholder.dart';
+import '../../../providers/ride_provider.dart';
+import '../../../data/models/ride_model.dart';
 
 class FindingDriverScreen extends StatefulWidget {
   final VoidCallback? onDriverFound;
@@ -72,9 +75,13 @@ class _FindingDriverScreenState extends State<FindingDriverScreen>
       if (mounted) setState(() => _dots = (_dots % 3) + 1);
     });
 
-    // Simulate finding driver after 4 seconds
-    _foundTimer = Timer(const Duration(seconds: 4), () {
-      if (mounted) setState(() => _found = true);
+    // Watch the RideProvider — driver matched when status leaves 'searching'
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ride = context.read<RideProvider>();
+      // If already matched (e.g. fast mock), reflect immediately
+      if (ride.matchedDriver != null && !_found) {
+        setState(() => _found = true);
+      }
     });
   }
 
@@ -89,6 +96,25 @@ class _FindingDriverScreenState extends State<FindingDriverScreen>
 
   @override
   Widget build(BuildContext context) {
+    // React to live ride status from the provider
+    final ride = context.watch<RideProvider>();
+    final matched = ride.matchedDriver != null &&
+        ride.rideStatus != RideStatus.searching;
+    if (matched && !_found) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _found = true);
+      });
+    }
+    // Auto-advance to tracking once driver is arriving/on-trip
+    if (_found &&
+        (ride.rideStatus == RideStatus.arriving ||
+            ride.rideStatus == RideStatus.arrived ||
+            ride.rideStatus == RideStatus.onTrip)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onDriverFound?.call();
+      });
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(

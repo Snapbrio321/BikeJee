@@ -1,12 +1,18 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/widgets/bikejee_logo.dart';
+import '../../../data/models/place_model.dart';
+import '../../../data/models/ride_model.dart';
+import '../../../data/services/places_service.dart';
+import '../../../providers/ride_provider.dart';
 
 class CustomerHomeScreen extends StatefulWidget {
-  final void Function(String service, String destination)? onBookRide;
+  /// Called when a destination is chosen — passes the resolved place.
+  final void Function(String service, PlaceModel destination)? onBookRide;
   final VoidCallback? onParcel;
 
   const CustomerHomeScreen({super.key, this.onBookRide, this.onParcel});
@@ -19,31 +25,17 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
     with TickerProviderStateMixin {
   final _destinationCtrl = TextEditingController();
   final _focusNode = FocusNode();
+  final _places = PlacesService();
   String _activeService = 'Bike'; // Bike | Auto | Cab | Parcel
   bool _showSuggestions = false;
   final bool _isSurge = true;
 
+  List<PlaceModel> _searchResults = [];
+
   late AnimationController _pulseCtrl;
   late AnimationController _captainCtrl;
 
-  // Simulated recent places
-  final _recentPlaces = [
-    _Place('Home', 'Koramangala, Bangalore', Icons.home_rounded, '2.1 km'),
-    _Place('Work', 'Electronic City, Bangalore', Icons.work_rounded, '8.4 km'),
-    _Place('MGM Hospital', 'MG Road, Bangalore', Icons.local_hospital_rounded, '4.2 km'),
-    _Place('Forum Mall', 'Koramangala, Bangalore', Icons.shopping_bag_rounded, '1.8 km'),
-  ];
-
-  // Simulated popular places
-  final _popular = [
-    _Place('Bangalore Airport', 'Devanahalli', Icons.flight_rounded, '34 km'),
-    _Place('Whitefield', 'Whitefield Main Rd', Icons.location_on_rounded, '18 km'),
-    _Place('Indiranagar', '100 Feet Road', Icons.location_on_rounded, '5.3 km'),
-    _Place('HSR Layout', 'Sector 2', Icons.location_on_rounded, '3.7 km'),
-    _Place('JP Nagar', '7th Phase', Icons.location_on_rounded, '6.1 km'),
-  ];
-
-  // Simulated nearby captains on map
+  // Nearby captains on map (animated dots)
   final _captainDots = <_CaptainDot>[];
 
   @override
@@ -54,7 +46,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
     _captainCtrl = AnimationController(
       vsync: this, duration: const Duration(seconds: 8))..repeat();
 
-    // Generate random nearby captain dots
+    _searchResults = _places.recentPlaces;
+
     final rng = math.Random(42);
     for (int i = 0; i < 6; i++) {
       _captainDots.add(_CaptainDot(
@@ -75,8 +68,10 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
   }
 
   void _openSearch() {
-    setState(() => _showSuggestions = true);
-    // Focus the field after it's rendered in the suggestions sheet
+    setState(() {
+      _showSuggestions = true;
+      _searchResults = _places.recentPlaces;
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _focusNode.requestFocus();
     });
@@ -87,28 +82,31 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
     setState(() => _showSuggestions = false);
   }
 
-  void _selectPlace(_Place place) {
+  Future<void> _onSearchChanged() async {
+    final results = await _places.search(_destinationCtrl.text);
+    if (mounted) setState(() => _searchResults = results);
+  }
+
+  Future<void> _selectPlace(PlaceModel place) async {
     _focusNode.unfocus();
     setState(() => _showSuggestions = false);
 
     if (_activeService == 'Parcel') {
       widget.onParcel?.call();
     } else {
-      widget.onBookRide?.call(_activeService, place.name);
+      // Resolve coords + push into RideProvider before navigating
+      final resolved = await _places.details(place);
+      if (!mounted) return;
+      final ride = context.read<RideProvider>();
+      ride.setService(ServiceTypeX.fromString(_activeService));
+      // pickup defaults to current location (set by book screen); set drop here
+      await ride.setDrop(resolved);
+      widget.onBookRide?.call(_activeService, resolved);
     }
-    // Clear after navigating so home is fresh on return
     _destinationCtrl.clear();
   }
 
-  List<_Place> get _filteredSuggestions {
-    final q = _destinationCtrl.text.toLowerCase();
-    if (q.isEmpty) return _recentPlaces;
-    return [..._recentPlaces, ..._popular]
-        .where((p) =>
-            p.name.toLowerCase().contains(q) ||
-            p.address.toLowerCase().contains(q))
-        .toList();
-  }
+  List<PlaceModel> get _filteredSuggestions => _searchResults;
 
   @override
   Widget build(BuildContext context) {
@@ -236,7 +234,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
                 focusNode: _focusNode,
                 suggestions: _filteredSuggestions,
                 onSelect: _selectPlace,
-                onChanged: () => setState(() {}),
+                onChanged: _onSearchChanged,
                 service: _activeService,
                 onServiceChange: (s) => setState(() => _activeService = s),
                 onClose: _closeSearch,
@@ -685,8 +683,8 @@ class _WhereToSheet extends StatelessWidget {
 class _SuggestionsSheet extends StatelessWidget {
   final TextEditingController controller;
   final FocusNode focusNode;
-  final List<_Place> suggestions;
-  final Function(_Place) onSelect;
+  final List<PlaceModel> suggestions;
+  final Function(PlaceModel) onSelect;
   final VoidCallback onChanged;
   final String service;
   final Function(String) onServiceChange;
@@ -702,6 +700,15 @@ class _SuggestionsSheet extends StatelessWidget {
     required this.onServiceChange,
     required this.onClose,
   });
+
+  IconData _iconForPlace(PlaceModel p) {
+    switch (p.type) {
+      case 'home': return Icons.home_rounded;
+      case 'work': return Icons.work_rounded;
+      case 'recent': return Icons.history_rounded;
+      default: return Icons.location_on_rounded;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -892,7 +899,7 @@ class _SuggestionsSheet extends StatelessWidget {
                             color: AppColors.greyBg,
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: Icon(place.icon,
+                          child: Icon(_iconForPlace(place),
                               color: AppColors.primary, size: 20),
                         ),
                         const SizedBox(width: 12),
@@ -906,9 +913,8 @@ class _SuggestionsSheet extends StatelessWidget {
                             ],
                           ),
                         ),
-                        Text(place.distance,
-                            style: AppTextStyles.labelMd
-                                .copyWith(color: AppColors.primary)),
+                        const Icon(Icons.north_east_rounded,
+                            color: AppColors.textLight, size: 16),
                       ],
                     ),
                   ),
@@ -1291,11 +1297,7 @@ class _SavedPlaceTile extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // Models
 // ─────────────────────────────────────────────────────────────────────────────
-class _Place {
-  final String name, address, distance;
-  final IconData icon;
-  const _Place(this.name, this.address, this.icon, this.distance);
-}
+
 
 class _CaptainDot {
   final double x, y, angle;

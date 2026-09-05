@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../data/models/user_model.dart';
 
 class LoginScreen extends StatefulWidget {
   final String role;
@@ -48,10 +51,30 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
+  bool _sending = false;
+
   void _sendOtp() async {
-    if (!_isValid) return;
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (mounted) widget.onOtpSent(_phoneController.text);
+    if (!_isValid || _sending) return;
+    setState(() => _sending = true);
+
+    final auth = context.read<AuthProvider>();
+    // Tell the provider which role is logging in
+    auth.setRole(_isDriver ? UserRole.driver : UserRole.customer);
+
+    final ok = await auth.sendOtp(_phoneController.text);
+
+    if (!mounted) return;
+    setState(() => _sending = false);
+    if (ok) {
+      widget.onOtpSent(_phoneController.text);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(auth.error ?? 'Failed to send OTP'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   bool get _isDriver => widget.role == 'driver';
@@ -255,18 +278,28 @@ class _LoginScreenState extends State<LoginScreen>
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(
-                                'Get OTP',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: _isValid ? Colors.white : AppColors.textLight,
+                              if (_sending) ...[
+                                const SizedBox(
+                                  width: 20, height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
                                 ),
-                              ),
-                              if (_isValid) ...[
-                                const SizedBox(width: 8),
-                                Icon(Icons.arrow_forward_rounded,
-                                    color: AppColors.primary, size: 18),
+                              ] else ...[
+                                Text(
+                                  'Get OTP',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: _isValid
+                                        ? Colors.white
+                                        : AppColors.textLight,
+                                  ),
+                                ),
+                                if (_isValid) ...[
+                                  const SizedBox(width: 8),
+                                  const Icon(Icons.arrow_forward_rounded,
+                                      color: Colors.white, size: 18),
+                                ],
                               ],
                             ],
                           ),

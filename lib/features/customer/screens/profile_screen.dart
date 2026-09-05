@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/wallet_provider.dart';
 
 class CustomerProfileScreen extends StatelessWidget {
   final VoidCallback? onLogout;
@@ -143,19 +146,33 @@ class _ProfileHeader extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text('Rohan Sharma', style: AppTextStyles.h3White),
-          const SizedBox(height: 4),
-          Text('+91 98765-43210', style: AppTextStyles.bodyMdWhite),
-          const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text('✓  Verified Account',
-                style: AppTextStyles.caption.copyWith(color: Colors.white)),
-          ),
+          Builder(builder: (context) {
+            final user = context.watch<AuthProvider>().user;
+            return Column(
+              children: [
+                Text(
+                  (user?.name.isNotEmpty ?? false) ? user!.name : 'BikeJee User',
+                  style: AppTextStyles.h3White,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  user != null ? '+91 ${user.phone}' : '',
+                  style: AppTextStyles.bodyMdWhite,
+                ),
+                const SizedBox(height: 4),
+                if (user?.isVerified ?? false)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text('✓  Verified Account',
+                        style: AppTextStyles.caption.copyWith(color: Colors.white)),
+                  ),
+              ],
+            );
+          }),
         ],
       ),
     );
@@ -179,17 +196,21 @@ class _StatsRow extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          _Stat('28', 'Total Rides'),
-          _VertDivider(),
-          _Stat('4.8', 'Avg Rating'),
-          _VertDivider(),
-          _Stat('₹320', 'Wallet'),
-          _VertDivider(),
-          _Stat('3', 'Referrals'),
-        ],
-      ),
+      child: Builder(builder: (context) {
+        final user = context.watch<AuthProvider>().user;
+        final wallet = context.watch<WalletProvider>();
+        return Row(
+          children: [
+            _Stat('${user?.totalRides ?? 0}', 'Total Rides'),
+            _VertDivider(),
+            _Stat((user?.rating ?? 0).toStringAsFixed(1), 'Avg Rating'),
+            _VertDivider(),
+            _Stat('₹${wallet.balance.toInt()}', 'Wallet'),
+            _VertDivider(),
+            _Stat('3', 'Referrals'),
+          ],
+        );
+      }),
     );
   }
 }

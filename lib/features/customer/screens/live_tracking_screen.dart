@@ -1,9 +1,11 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_map_placeholder.dart';
+import '../../../providers/ride_provider.dart';
+import '../../../data/models/ride_model.dart';
 
 class LiveTrackingScreen extends StatefulWidget {
   final VoidCallback? onRideCompleted;
@@ -23,10 +25,11 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _arrivingCtrl;
   late Animation<double> _arrivingAnim;
-  int _etaMinutes = 2;
-  Timer? _etaTimer;
-  Timer? _completeTimer;
-  String _status = 'on_way'; // on_way → arriving → completed
+
+  // Driven by RideProvider each build
+  String _status = 'on_way';
+  int _etaMinutes = 3;
+  bool _completedHandled = false;
 
   @override
   void initState() {
@@ -35,34 +38,49 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
-    _arrivingAnim = CurvedAnimation(parent: _arrivingCtrl, curve: Curves.easeInOut);
+    _arrivingAnim =
+        CurvedAnimation(parent: _arrivingCtrl, curve: Curves.easeInOut);
 
-    // Countdown ETA
-    _etaTimer = Timer.periodic(const Duration(seconds: 3), (_) {
-      if (!mounted) return;
-      if (_etaMinutes > 0) {
-        setState(() => _etaMinutes--);
-      } else if (_status == 'on_way') {
-        setState(() => _status = 'arriving');
-      }
-    });
-
-    // Simulate ride completion
-    _completeTimer = Timer(const Duration(seconds: 16), () {
-      if (mounted) setState(() => _status = 'completed');
+    // Join the live tracking room (real backend) — mock auto-runs already.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // provider already tracking from bookRide(); nothing else needed
     });
   }
 
   @override
   void dispose() {
     _arrivingCtrl.dispose();
-    _etaTimer?.cancel();
-    _completeTimer?.cancel();
     super.dispose();
+  }
+
+  // Map the provider's RideStatus to this screen's visual state.
+  String _statusFor(RideStatus s) {
+    switch (s) {
+      case RideStatus.arrived:
+      case RideStatus.arriving:
+        return 'arriving';
+      case RideStatus.completed:
+        return 'completed';
+      default:
+        return 'on_way';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Sync visual state from the live RideProvider
+    final ride = context.watch<RideProvider>();
+    _status = _statusFor(ride.rideStatus);
+    _etaMinutes = ride.etaMinutes ?? _etaMinutes;
+
+    // Auto-navigate to Ride Completed when the trip finishes
+    if (ride.rideStatus == RideStatus.completed && !_completedHandled) {
+      _completedHandled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onRideCompleted?.call();
+      });
+    }
+
     return Scaffold(
       body: Stack(
         children: [

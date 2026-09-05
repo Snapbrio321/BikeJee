@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/widgets/app_map_placeholder.dart';
+import '../../../providers/ride_provider.dart';
+import '../../../data/models/ride_model.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Pricing config — ₹8/km base, per tier
@@ -108,6 +111,12 @@ class _BookRideScreenState extends State<BookRideScreen>
     super.initState();
     _dropCtrl = TextEditingController(text: widget.destination);
 
+    // Pull the real distance computed by RideProvider (haversine / Distance Matrix)
+    final ride = context.read<RideProvider>();
+    if (ride.distanceKm > 0) {
+      _distanceKm = ride.distanceKm;
+    }
+
     _sheetCtrl = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 500));
     _sheetAnim = Tween<Offset>(
@@ -143,6 +152,17 @@ class _BookRideScreenState extends State<BookRideScreen>
   }
 
   _Tier get _selected => _tiers[_selectedTier];
+
+  // Books the ride via RideProvider, then triggers navigation to Finding Driver.
+  void _confirmBooking() async {
+    final ride = context.read<RideProvider>();
+    // Map the selected tier index to the RideTier enum
+    ride.setTier(RideTier.values[_selectedTier.clamp(0, 2)]);
+    // customerId is stored in AuthProvider — use a placeholder if absent
+    await ride.bookRide('current-user');
+    if (!mounted) return;
+    widget.onBooked?.call();
+  }
 
   int get _finalFare =>
       (_selected.fare * _selected.surgeMultiplier).toInt();
@@ -329,7 +349,7 @@ class _BookRideScreenState extends State<BookRideScreen>
                 onPaymentTap: _showPaymentSheet,
                 onChatTap: () =>
                     setState(() => _showChat = !_showChat),
-                onBook: widget.onBooked,
+                onBook: _confirmBooking,
                 dropCtrl: _dropCtrl,
                 pickupCtrl: _pickupCtrl,
               ),
