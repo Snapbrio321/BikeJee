@@ -6,9 +6,10 @@ RUN apk add --no-cache curl
 
 WORKDIR /app
 
-# Install prod deps only (leverages layer caching)
+# Install prod deps only (leverages layer caching).
+# Uses `npm install` (not `npm ci`) because the repo has no package-lock.json.
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # App source
 COPY . .
