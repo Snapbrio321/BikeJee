@@ -1,0 +1,73 @@
+# Local / single-box production stack: app + postgres + redis.
+# For 1 lakh users on AWS, run the app on ECS/EC2 behind an ALB and use
+# managed RDS + ElastiCache instead of the postgres/redis services here
+# (see DEPLOY.md). This compose file is ideal for local testing and small
+# single-server deployments.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: bikejee
+      POSTGRES_PASSWORD: bikejee
+      POSTGRES_DB: bikejee
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bikejee"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # One-shot migration runner: `docker compose run --rm migrate`
+  migrate:
+    build: .
+    command: ["node", "src/db/migrate.js"]
+    environment:
+      DATABASE_URL: postgres://bikejee:bikejee@postgres:5432/bikejee
+      PG_SSL: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["tools"]
+    restart: "no"
+
+  app:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgres://bikejee:bikejee@postgres:5432/bikejee
+      REDIS_URL: redis://redis:6379
+      PG_SSL: "false"
+      PG_POOL_MAX: "20"
+      PM2_INSTANCES: "max"
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production}
+      SMS_PROVIDER: ${SMS_PROVIDER:-console}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
