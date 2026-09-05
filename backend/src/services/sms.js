@@ -35,14 +35,26 @@ async function sendViaMsg91(phone, message) {
   return res.ok;
 }
 
+// Reuse one SNS client across calls (cheaper than constructing per request).
+let _snsClient;
+
 async function sendViaSns(phone, message) {
-  // Uses AWS SDK v3. Requires: npm i @aws-sdk/client-sns
+  // Uses AWS SDK v3 (@aws-sdk/client-sns). On EC2 this authenticates via the
+  // instance's IAM role — no access keys needed.
   const { SNSClient, PublishCommand } = await import('@aws-sdk/client-sns');
-  const client = new SNSClient({ region: process.env.AWS_REGION });
-  await client.send(
+  _snsClient ??= new SNSClient({ region: process.env.AWS_REGION || 'ap-south-1' });
+
+  await _snsClient.send(
     new PublishCommand({
       PhoneNumber: `+91${phone}`,
       Message: message,
+      MessageAttributes: {
+        // Transactional = highest delivery priority (correct for OTP/2FA).
+        'AWS.SNS.SMS.SMSType': {
+          DataType: 'String',
+          StringValue: 'Transactional',
+        },
+      },
     })
   );
   return true;

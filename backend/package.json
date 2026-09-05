@@ -11,6 +11,7 @@
     "migrate": "node src/db/migrate.js"
   },
   "dependencies": {
+    "@aws-sdk/client-sns": "^3.670.0",
     "express": "^4.21.0",
     "cors": "^2.8.5",
     "helmet": "^8.0.0",
