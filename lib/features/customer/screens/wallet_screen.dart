@@ -1,0 +1,393 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_text_styles.dart';
+import '../../../core/widgets/app_button.dart';
+import '../../../core/widgets/app_card.dart';
+
+class WalletScreen extends StatefulWidget {
+  const WalletScreen({super.key});
+
+  @override
+  State<WalletScreen> createState() => _WalletScreenState();
+}
+
+class _WalletScreenState extends State<WalletScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _balanceCtrl;
+  late Animation<double> _balanceAnim;
+  final double _balance = 320.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _balanceCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..forward();
+    _balanceAnim = CurvedAnimation(parent: _balanceCtrl, curve: Curves.easeOut);
+  }
+
+  @override
+  void dispose() {
+    _balanceCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: CustomScrollView(
+        slivers: [
+          // Wallet header
+          SliverToBoxAdapter(child: _WalletHeader(balance: _balance, anim: _balanceAnim)),
+
+          // Quick add amounts
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+              child: _QuickAddRow(onAdd: (amount) => _showAddMoney(amount)),
+            ),
+          ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 20)),
+
+          // Transactions header
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Transactions', style: AppTextStyles.h4),
+                  TextButton(
+                    onPressed: () {},
+                    child: Text('View All', style: AppTextStyles.bodyMdOrange),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Transaction list
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (_, i) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: _TransactionTile(tx: _transactions[i]),
+              ),
+              childCount: _transactions.length,
+            ),
+          ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
+      ),
+    );
+  }
+
+  void _showAddMoney(double amount) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => _AddMoneySheet(initialAmount: amount),
+    );
+  }
+
+  static final _transactions = [
+    _Tx('Added Money', '+₹200', '09 May, 10:33 AM', Icons.add_circle_rounded, AppColors.success, true),
+    _Tx('Ride Payment', '-₹45', '09 May, 09:15 AM', Icons.electric_bike_rounded, AppColors.error, false),
+    _Tx('Ride Payment', '-₹45', '08 May, 05:40 PM', Icons.electric_bike_rounded, AppColors.error, false),
+    _Tx('Parcel Payment', '-₹60', '07 May, 02:20 PM', Icons.inventory_2_rounded, AppColors.error, false),
+    _Tx('Added Money', '+₹100', '05 May, 11:00 AM', Icons.add_circle_rounded, AppColors.success, true),
+    _Tx('Referral Bonus', '+₹50', '03 May, 08:30 AM', Icons.card_giftcard_rounded, AppColors.success, true),
+    _Tx('Ride Payment', '-₹30', '01 May, 07:45 PM', Icons.electric_bike_rounded, AppColors.error, false),
+  ];
+}
+
+class _WalletHeader extends StatelessWidget {
+  final double balance;
+  final Animation<double> anim;
+  const _WalletHeader({required this.balance, required this.anim});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: AppColors.walletGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.35),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Wallet Balance', style: AppTextStyles.bodyMdWhite),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.account_balance_wallet_rounded,
+                        color: Colors.white, size: 14),
+                    const SizedBox(width: 5),
+                    Text('BikeJee Wallet', style: AppTextStyles.caption.copyWith(color: Colors.white)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          AnimatedBuilder(
+            animation: anim,
+            builder: (_, __) => Text(
+              '₹${(balance * anim.value).toStringAsFixed(0)}',
+              style: GoogleFonts.poppins(
+                fontSize: 40,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _WalletAction(
+                  icon: Icons.add_rounded,
+                  label: '+ Add Money',
+                  onTap: () {},
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _WalletAction(
+                  icon: Icons.send_rounded,
+                  label: 'Transfer',
+                  onTap: () {},
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _WalletAction(
+                  icon: Icons.history_rounded,
+                  label: 'History',
+                  onTap: () {},
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WalletAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _WalletAction({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(height: 4),
+            Text(label,
+                style: AppTextStyles.caption
+                    .copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickAddRow extends StatelessWidget {
+  final Function(double) onAdd;
+  const _QuickAddRow({required this.onAdd});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Quick Add', style: AppTextStyles.h5),
+        const SizedBox(height: 10),
+        Row(
+          children: [100.0, 200.0, 500.0, 1000.0].map((a) {
+            return Expanded(
+              child: GestureDetector(
+                onTap: () => onAdd(a),
+                child: Container(
+                  margin: EdgeInsets.only(right: a < 1000 ? 8 : 0),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.greyBg,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Text(
+                    '₹${a.toInt()}',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.labelMd.copyWith(color: AppColors.primary),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+}
+
+class _TransactionTile extends StatelessWidget {
+  final _Tx tx;
+  const _TransactionTile({required this.tx});
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 42, height: 42,
+            decoration: BoxDecoration(
+              color: tx.color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(tx.icon, color: tx.color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(tx.label, style: AppTextStyles.h5),
+                Text(tx.time, style: AppTextStyles.bodySm),
+              ],
+            ),
+          ),
+          Text(
+            tx.amount,
+            style: AppTextStyles.priceSmall.copyWith(
+              color: tx.isCredit ? AppColors.success : AppColors.error,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddMoneySheet extends StatefulWidget {
+  final double initialAmount;
+  const _AddMoneySheet({required this.initialAmount});
+
+  @override
+  State<_AddMoneySheet> createState() => _AddMoneySheetState();
+}
+
+class _AddMoneySheetState extends State<_AddMoneySheet> {
+  late TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(
+        text: widget.initialAmount > 0 ? widget.initialAmount.toInt().toString() : '');
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                    color: AppColors.border, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            Text('Add Money', style: AppTextStyles.h3),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _ctrl,
+              keyboardType: TextInputType.number,
+              style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.w700),
+              decoration: InputDecoration(
+                prefixText: '₹  ',
+                prefixStyle: GoogleFonts.poppins(
+                    fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.primary),
+                hintText: '0',
+                filled: true,
+                fillColor: AppColors.greyBg,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 20),
+            AppGradientButton(
+              label: 'Proceed to Pay',
+              onTap: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Tx {
+  final String label, amount, time;
+  final IconData icon;
+  final Color color;
+  final bool isCredit;
+  const _Tx(this.label, this.amount, this.time, this.icon, this.color, this.isCredit);
+}
