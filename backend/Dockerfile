@@ -1,8 +1,8 @@
 # BikeJee backend — production image
 FROM node:20-alpine
 
-# curl is used by the container HEALTHCHECK
-RUN apk add --no-cache curl
+# curl (HEALTHCHECK) + PM2 for cluster mode — installed as root.
+RUN apk add --no-cache curl && npm i -g pm2@5
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ RUN npm install --omit=dev
 # App source
 COPY . .
 
-# Non-root user for safety
+# Non-root user for safety (created after global installs / deps)
 RUN addgroup -g 1001 nodejs && adduser -S -u 1001 -G nodejs nodejs \
   && mkdir -p logs && chown -R nodejs:nodejs /app
 USER nodejs
@@ -28,5 +28,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
 
 # Cluster mode via PM2 (one worker per core). pm2-runtime keeps PID 1 alive
 # and forwards SIGTERM for graceful shutdown.
-RUN npm i -g pm2@5
 CMD ["pm2-runtime", "start", "ecosystem.config.cjs"]
