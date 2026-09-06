@@ -11,6 +11,7 @@ import jwt from 'jsonwebtoken';
 import authRoutes from './routes/auth.js';
 import rideRoutes from './routes/rides.js';
 import paymentRoutes from './routes/payments.js';
+import walletRoutes from './routes/wallet.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { pool } from './db/pool.js';
 import {
@@ -43,6 +44,7 @@ app.get('/health', async (_req, res) => {
 app.use('/auth', authRoutes);          // auth has its own tighter limiters
 app.use('/rides', apiLimiter, rideRoutes);
 app.use('/payments', apiLimiter, paymentRoutes);
+app.use('/wallet', apiLimiter, walletRoutes);
 
 const server = createServer(app);
 

@@ -9,6 +9,7 @@ import '../../../data/models/place_model.dart';
 import '../../../data/models/ride_model.dart';
 import '../../../data/services/places_service.dart';
 import '../../../providers/ride_provider.dart';
+import '../../../providers/location_provider.dart';
 
 class CustomerHomeScreen extends StatefulWidget {
   /// Called when a destination is chosen — passes the resolved place.
@@ -98,9 +99,22 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
       final resolved = await _places.details(place);
       if (!mounted) return;
       final ride = context.read<RideProvider>();
+      final loc = context.read<LocationProvider>();
       ride.setService(ServiceTypeX.fromString(_activeService));
-      // pickup defaults to current location (set by book screen); set drop here
+
+      // Set pickup from the user's current location so the real distance +
+      // fares get computed. Fetch it now if we don't have it yet.
+      var current = loc.current;
+      if (current == null) {
+        await loc.fetchOnce();
+        current = loc.current;
+      }
+      if (current != null) {
+        await ride.setPickupFromLocation(current);
+      }
+      // Then the destination — this triggers distance + fare recalculation.
       await ride.setDrop(resolved);
+      if (!mounted) return;
       widget.onBookRide?.call(_activeService, resolved);
     }
     _destinationCtrl.clear();
@@ -474,7 +488,7 @@ class _ServiceTabRow extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   tab.$1,
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.plusJakartaSans(
                     fontSize: 12,
                     fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                     color: isActive ? Colors.white : Colors.white70,

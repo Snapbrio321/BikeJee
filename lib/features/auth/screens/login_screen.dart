@@ -81,8 +81,6 @@ class _LoginScreenState extends State<LoginScreen>
 
   @override
   Widget build(BuildContext context) {
-    const headerColor = AppColors.secondary; // Always deep navy
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: FadeTransition(
@@ -91,82 +89,172 @@ class _LoginScreenState extends State<LoginScreen>
           children: [
             // ── Header ─────────────────────────────────────────────────────
             Container(
-              color: headerColor,
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      GestureDetector(
-                        onTap: widget.onBack,
-                        child: Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.arrow_back_rounded,
-                              color: Colors.white, size: 20),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      // Yellow label chip
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          _isDriver ? 'DRIVER PARTNER' : 'CUSTOMER',
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.secondary,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        _isDriver
-                            ? 'Welcome to\nBikeJee Partner'
-                            : 'Welcome to\nBikeJee',
-                        style: GoogleFonts.poppins(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          height: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _isDriver
-                            ? 'Earn more. Ride more. Be your own boss.'
-                            : 'Ride Fast. Deliver Smart.',
-                        style: AppTextStyles.bodyMd
-                            .copyWith(color: Colors.white60),
-                      ),
-                    ],
-                  ),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: AppColors.heroGradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+              ),
+              child: Stack(
+                children: [
+                  // Decorative depth — soft glowing circles
+                  Positioned(
+                    top: -50,
+                    right: -30,
+                    child: _glowCircle(160, AppColors.primary.withOpacity(0.16)),
+                  ),
+                  Positioned(
+                    top: 40,
+                    right: 60,
+                    child: _glowCircle(70, AppColors.primary.withOpacity(0.10)),
+                  ),
+                  Positioned(
+                    bottom: -20,
+                    left: -20,
+                    child: _glowCircle(110, Colors.white.withOpacity(0.04)),
+                  ),
+
+                  SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 34),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          GestureDetector(
+                            onTap: widget.onBack,
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: Colors.white.withOpacity(0.08)),
+                              ),
+                              child: const Icon(Icons.arrow_back_rounded,
+                                  color: Colors.white, size: 20),
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+
+                          // Brand logo mark
+                          Row(
+                            children: [
+                              Container(
+                                width: 52,
+                                height: 52,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: AppColors.successGradient,
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primary.withOpacity(0.4),
+                                      blurRadius: 16,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                    Icons.electric_bike_rounded,
+                                    color: Colors.white,
+                                    size: 30),
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'BikeJee',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                      height: 1,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  // Role badge
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withOpacity(0.18),
+                                      borderRadius: BorderRadius.circular(5),
+                                      border: Border.all(
+                                          color: AppColors.primary
+                                              .withOpacity(0.4)),
+                                    ),
+                                    child: Text(
+                                      _isDriver
+                                          ? 'DRIVER PARTNER'
+                                          : 'CUSTOMER',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.primaryLight,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 26),
+                          Text(
+                            _isDriver
+                                ? 'Start earning\non your schedule'
+                                : 'Your ride is\njust a tap away',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 27,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              height: 1.25,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _isDriver
+                                ? 'Earn more. Ride more. Be your own boss.'
+                                : 'Fast bikes, autos & cabs across your city.',
+                            style: AppTextStyles.bodyMd
+                                .copyWith(color: Colors.white70),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 
-            // ── White form area ────────────────────────────────────────────
+            // ── White form area (overlaps header for a layered look) ───────
             Expanded(
-              child: Container(
-                decoration: const BoxDecoration(
+              child: Transform.translate(
+                offset: const Offset(0, -20),
+                child: Container(
+                decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(28)),
+                      const BorderRadius.vertical(top: Radius.circular(28)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 20,
+                      offset: const Offset(0, -6),
+                    ),
+                  ],
                 ),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
+                  padding: const EdgeInsets.fromLTRB(24, 26, 24, 32),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -287,7 +375,7 @@ class _LoginScreenState extends State<LoginScreen>
                               ] else ...[
                                 Text(
                                   'Get OTP',
-                                  style: GoogleFonts.poppins(
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700,
                                     color: _isValid
@@ -374,9 +462,22 @@ class _LoginScreenState extends State<LoginScreen>
                   ),
                 ),
               ),
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Soft decorative glow used behind the header for depth.
+  Widget _glowCircle(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color,
       ),
     );
   }

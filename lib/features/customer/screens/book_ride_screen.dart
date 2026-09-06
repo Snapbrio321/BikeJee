@@ -57,7 +57,7 @@ class _BookRideScreenState extends State<BookRideScreen>
   int _selectedTier  = 0;   // 0=Go, 1=Plus, 2=Premium
   String _payment    = 'Cash';
   final bool _isSurge = true;
-  double _distanceKm = 4.2; // default simulated distance
+  double _distanceKm = 3.0; // fallback until the real distance loads
 
   // Quick chat messages (Rapido feature)
   bool _showChat = false;
@@ -111,10 +111,15 @@ class _BookRideScreenState extends State<BookRideScreen>
     super.initState();
     _dropCtrl = TextEditingController(text: widget.destination);
 
-    // Pull the real distance computed by RideProvider (haversine / Distance Matrix)
+    // Pull the real distance computed by RideProvider (haversine / Distance Matrix).
+    // Pickup is now set from the user's location in home_screen, so this is real.
     final ride = context.read<RideProvider>();
     if (ride.distanceKm > 0) {
       _distanceKm = ride.distanceKm;
+    }
+    // Prefill the pickup label from the resolved pickup place.
+    if (ride.pickup?.name.isNotEmpty ?? false) {
+      _pickupCtrl.text = ride.pickup!.name;
     }
 
     _sheetCtrl = AnimationController(
@@ -134,12 +139,17 @@ class _BookRideScreenState extends State<BookRideScreen>
       _sheetCtrl.forward();
       _routeCtrl.forward();
     });
+  }
 
-    // Simulate distance recalculation as destination changes
-    _dropCtrl.addListener(() {
-      final km = 2.0 + _dropCtrl.text.length * 0.25;
-      setState(() => _distanceKm = double.parse(km.toStringAsFixed(1)));
-    });
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Keep the displayed distance in sync with the provider's real value
+    // (it may recalculate asynchronously in real/backend mode).
+    final r = context.read<RideProvider>();
+    if (r.distanceKm > 0 && r.distanceKm != _distanceKm) {
+      _distanceKm = r.distanceKm;
+    }
   }
 
   @override
@@ -575,7 +585,7 @@ class _FareSheet extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text('₹$displayFare',
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
                                   color: isSelected
@@ -673,7 +683,7 @@ class _FareSheet extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text('₹$finalFare',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.plusJakartaSans(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
                             color: AppColors.textDark)),
@@ -714,7 +724,7 @@ class _FareSheet extends StatelessWidget {
                   children: [
                     Text(
                       'Book ${tiers[selectedIndex].name.replaceFirst("BikeJee ", "")} · ₹$finalFare',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,

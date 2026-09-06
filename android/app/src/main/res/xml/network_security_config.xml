@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Allows cleartext (HTTP) traffic ONLY to the BikeJee backend IP while we run
+  without a domain/HTTPS. Everything else stays HTTPS-only (secure default).
+  Once a domain + SSL are added, point the app at https:// and this file can
+  be removed or tightened.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">13.204.155.82</domain>
+    </domain-config>
+</network-security-config>
