@@ -2,11 +2,17 @@ import 'package:dio/dio.dart';
 import '../../core/config/app_config.dart';
 import '../models/lat_lng.dart';
 import '../models/place_model.dart';
+import 'api_client.dart';
 
 /// Place search (autocomplete), place details (→ coordinates), and distance.
-/// Uses Google Places + Distance Matrix when a key is set, else mock data.
+///
+/// Prefers the BACKEND PROXY (/places/*) when a backend is configured — this
+/// works on web (no CORS) and mobile, and keeps the Maps key server-side.
+/// Falls back to calling Google directly (mobile, key in app), then to mock
+/// data when nothing is configured.
 class PlacesService {
   final Dio _dio = Dio();
+  final ApiClient _api = ApiClient.instance;
 
   static const _placesBase =
       'https://maps.googleapis.com/maps/api/place';
@@ -41,6 +47,30 @@ class PlacesService {
 
   /// Autocomplete search. Returns matching places.
   Future<List<PlaceModel>> search(String query, {GeoPoint? near}) async {
+    // 1) Backend proxy (works on web + mobile, no CORS).
+    if (AppConfig.hasBackend) {
+      try {
+        final res = await _api.get('/places/search', query: {
+          'q': query,
+          if (near != null) 'lat': near.latitude,
+          if (near != null) 'lng': near.longitude,
+        });
+        final list = (res.data['places'] as List?) ?? [];
+        final places = list
+            .map((p) => PlaceModel(
+                  id: p['id']?.toString() ?? '',
+                  name: p['name'] ?? '',
+                  address: p['address'] ?? '',
+                  type: 'search',
+                ))
+            .toList();
+        // Return proxy results when the user actually typed something.
+        // For an empty query, fall through to show the recent/mock list.
+        if (query.trim().isNotEmpty) return places;
+      } catch (_) {/* fall through */}
+    }
+
+    // 2) No backend + no key → mock catalogue.
     if (!AppConfig.hasMapsKey) {
       await Future.delayed(const Duration(milliseconds: 150));
       if (query.trim().isEmpty) return _mockPlaces.take(6).toList();
@@ -52,6 +82,7 @@ class PlacesService {
           .toList();
     }
 
+    // 3) Direct Google call (mobile with key in app).
     try {
       final res = await _dio.get('$_placesBase/autocomplete/json', queryParameters: {
         'input': query,
@@ -76,8 +107,30 @@ class PlacesService {
   /// Resolves a place's coordinates (needed after autocomplete selection).
   Future<PlaceModel> details(PlaceModel place) async {
     if (place.location != null) return place; // mock places already have coords
+
+    // 1) Backend proxy
+    if (AppConfig.hasBackend) {
+      try {
+        final res = await _api.get('/places/details', query: {'id': place.id});
+        final d = res.data as Map<String, dynamic>;
+        if (d['lat'] != null && d['lng'] != null) {
+          return PlaceModel(
+            id: place.id,
+            name: place.name,
+            address: place.address,
+            type: place.type,
+            location: GeoPoint(
+              latitude: (d['lat'] as num).toDouble(),
+              longitude: (d['lng'] as num).toDouble(),
+            ),
+          );
+        }
+      } catch (_) {/* fall through */}
+    }
+
     if (!AppConfig.hasMapsKey) return place;
 
+    // 2) Direct Google call (mobile)
     try {
       final res = await _dio.get('$_placesBase/details/json', queryParameters: {
         'place_id': place.id,
@@ -104,7 +157,21 @@ class PlacesService {
   /// Real driving distance (km) between two points via Distance Matrix API.
   /// Returns null on failure so caller can fall back to haversine.
   Future<double?> drivingDistanceKm(GeoPoint origin, GeoPoint dest) async {
+    // 1) Backend proxy
+    if (AppConfig.hasBackend) {
+      try {
+        final res = await _api.get('/places/distance', query: {
+          'fromLat': origin.latitude, 'fromLng': origin.longitude,
+          'toLat': dest.latitude, 'toLng': dest.longitude,
+        });
+        final km = res.data['distanceKm'];
+        if (km != null) return (km as num).toDouble();
+      } catch (_) {/* fall through */}
+    }
+
     if (!AppConfig.hasMapsKey) return null;
+
+    // 2) Direct Google call (mobile)
     try {
       final res = await _dio.get(_distanceBase, queryParameters: {
         'origins': '${origin.latitude},${origin.longitude}',

@@ -12,6 +12,7 @@ import authRoutes from './routes/auth.js';
 import rideRoutes from './routes/rides.js';
 import paymentRoutes from './routes/payments.js';
 import walletRoutes from './routes/wallet.js';
+import placesRoutes from './routes/places.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { pool } from './db/pool.js';
 import {
@@ -45,6 +46,7 @@ app.use('/auth', authRoutes);          // auth has its own tighter limiters
 app.use('/rides', apiLimiter, rideRoutes);
 app.use('/payments', apiLimiter, paymentRoutes);
 app.use('/wallet', apiLimiter, walletRoutes);
+app.use('/places', apiLimiter, placesRoutes);
 
 const server = createServer(app);
 

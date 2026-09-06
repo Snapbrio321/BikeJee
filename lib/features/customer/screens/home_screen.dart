@@ -8,6 +8,8 @@ import '../../../core/widgets/bikejee_logo.dart';
 import '../../../data/models/place_model.dart';
 import '../../../data/models/ride_model.dart';
 import '../../../data/services/places_service.dart';
+import '../../../data/models/lat_lng.dart';
+import '../../../core/widgets/bikejee_map.dart';
 import '../../../providers/ride_provider.dart';
 import '../../../providers/location_provider.dart';
 
@@ -129,11 +131,15 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen>
       body: Stack(
         children: [
           // ── Full-screen map ──────────────────────────────────────────────
-          Positioned.fill(child: _MapBackground(
-            captainDots: _captainDots,
-            captainAnim: _captainCtrl,
-            pulseAnim: _pulseCtrl,
-          )),
+          // Real Google Map when a key is configured; otherwise the animated
+          // placeholder is shown automatically by BikeJeeMap.
+          Positioned.fill(
+            child: BikeJeeMap(
+              isFullScreen: true,
+              center: context.watch<LocationProvider>().current ??
+                  const GeoPoint(latitude: 12.9716, longitude: 77.5946),
+            ),
+          ),
 
           // ── Top bar (logo + notifications) ───────────────────────────────
           Positioned(
