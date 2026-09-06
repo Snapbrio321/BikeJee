@@ -1,9 +1,11 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_map_placeholder.dart';
+import '../../../data/models/ride_model.dart';
+import '../../../providers/driver_provider.dart';
 
 class DriverRideFlowScreen extends StatefulWidget {
   final VoidCallback? onRideCompleted;
@@ -20,36 +22,32 @@ class DriverRideFlowScreen extends StatefulWidget {
 }
 
 class _DriverRideFlowScreenState extends State<DriverRideFlowScreen> {
-  // States: pickup → onTrip → completed
-  String _state = 'pickup';
-  double _distanceKm = 1.2;
-  Timer? _progressTimer;
   bool _cashReceived = false;
 
-  @override
-  void initState() {
-    super.initState();
-    // Simulate approaching pickup
-    _progressTimer = Timer.periodic(const Duration(seconds: 2), (_) {
-      if (mounted && _state == 'pickup') {
-        if (_distanceKm > 0.1) {
-          setState(() => _distanceKm = (_distanceKm - 0.1).clamp(0, 10));
-        } else {
-          setState(() => _state = 'arrived');
-          _progressTimer?.cancel();
-        }
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _progressTimer?.cancel();
-    super.dispose();
+  /// Maps the active ride's status to a UI sheet state.
+  String _stateFor(RideStatus status) {
+    switch (status) {
+      case RideStatus.arrived:   return 'arrived';
+      case RideStatus.onTrip:    return 'onTrip';
+      case RideStatus.completed: return 'completed';
+      default:                   return 'pickup'; // accepted / arriving
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final driver = context.watch<DriverProvider>();
+    final ride = driver.activeRide;
+
+    // No active ride (e.g. just completed) — nothing to show.
+    if (ride == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final state = _stateFor(ride.status);
+
     return Scaffold(
       body: Stack(
         children: [
@@ -105,12 +103,12 @@ class _DriverRideFlowScreenState extends State<DriverRideFlowScreen> {
                   Container(
                     width: 8, height: 8,
                     decoration: BoxDecoration(
-                      color: _state == 'onTrip' ? AppColors.success : AppColors.primary,
+                      color: state == 'onTrip' ? AppColors.success : AppColors.primary,
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 6),
-                  Text(_stateLabel,
+                  Text(_stateLabel(state),
                       style: AppTextStyles.labelSm.copyWith(color: AppColors.textDark)),
                 ],
               ),
@@ -122,7 +120,7 @@ class _DriverRideFlowScreenState extends State<DriverRideFlowScreen> {
             bottom: 0, left: 0, right: 0,
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 350),
-              child: _buildSheet(),
+              child: _buildSheet(context, state, ride, driver),
             ),
           ),
         ],
@@ -130,8 +128,8 @@ class _DriverRideFlowScreenState extends State<DriverRideFlowScreen> {
     );
   }
 
-  String get _stateLabel {
-    switch (_state) {
+  String _stateLabel(String state) {
+    switch (state) {
       case 'onTrip': return 'On Trip';
       case 'arrived': return 'At Pickup';
       case 'completed': return 'Completed';
@@ -139,25 +137,30 @@ class _DriverRideFlowScreenState extends State<DriverRideFlowScreen> {
     }
   }
 
-  Widget _buildSheet() {
-    switch (_state) {
+  Widget _buildSheet(
+      BuildContext context, String state, RideModel ride, DriverProvider driver) {
+    switch (state) {
       case 'arrived':
         return _ArrivedSheet(
           key: const ValueKey('arrived'),
-          onStartTrip: () => setState(() => _state = 'onTrip'),
+          ride: ride,
+          onStartTrip: () => driver.startTrip(),
         );
       case 'onTrip':
         return _OnTripSheet(
           key: const ValueKey('onTrip'),
-          onComplete: () => setState(() => _state = 'completed'),
+          ride: ride,
+          onComplete: () => driver.completeRide(),
         );
       case 'completed':
         return _CompletedSheet(
           key: const ValueKey('completed'),
+          ride: ride,
           cashReceived: _cashReceived,
           onCashReceived: () {
             setState(() => _cashReceived = true);
             Future.delayed(const Duration(milliseconds: 800), () {
+              driver.finishRide();
               widget.onRideCompleted?.call();
             });
           },
@@ -165,15 +168,17 @@ class _DriverRideFlowScreenState extends State<DriverRideFlowScreen> {
       default:
         return _ToPickupSheet(
           key: const ValueKey('pickup'),
-          distanceKm: _distanceKm,
+          ride: ride,
+          onArrived: () => driver.markArrived(),
         );
     }
   }
 }
 
 class _ToPickupSheet extends StatelessWidget {
-  final double distanceKm;
-  const _ToPickupSheet({super.key, required this.distanceKm});
+  final RideModel ride;
+  final VoidCallback onArrived;
+  const _ToPickupSheet({super.key, required this.ride, required this.onArrived});
 
   @override
   Widget build(BuildContext context) {
@@ -187,8 +192,9 @@ class _ToPickupSheet extends StatelessWidget {
                 children: [
                   Text('On the way to Pickup', style: AppTextStyles.h4),
                   const SizedBox(height: 4),
-                  Text('${distanceKm.toStringAsFixed(1)} km away',
-                      style: AppTextStyles.bodyMd.copyWith(color: AppColors.primary)),
+                  Text(ride.pickup.name,
+                      style: AppTextStyles.bodyMd.copyWith(color: AppColors.primary),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),
@@ -203,7 +209,7 @@ class _ToPickupSheet extends StatelessWidget {
                 children: [
                   const Icon(Icons.electric_bike_rounded, color: AppColors.primary, size: 18),
                   const SizedBox(width: 6),
-                  Text('${(distanceKm / 0.3).ceil()} min',
+                  Text('₹${ride.fare}',
                       style: AppTextStyles.h5.copyWith(color: AppColors.primary)),
                 ],
               ),
@@ -211,7 +217,7 @@ class _ToPickupSheet extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 14),
-        _CustomerInfo(),
+        _CustomerInfo(ride: ride),
         const SizedBox(height: 14),
         Row(
           children: [
@@ -224,14 +230,21 @@ class _ToPickupSheet extends StatelessWidget {
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        AppGradientButton(
+          label: 'Arrived at Pickup',
+          onTap: onArrived,
+          prefixIcon: Icons.location_on_rounded,
+        ),
       ],
     );
   }
 }
 
 class _ArrivedSheet extends StatelessWidget {
+  final RideModel ride;
   final VoidCallback onStartTrip;
-  const _ArrivedSheet({super.key, required this.onStartTrip});
+  const _ArrivedSheet({super.key, required this.ride, required this.onStartTrip});
 
   @override
   Widget build(BuildContext context) {
@@ -255,7 +268,7 @@ class _ArrivedSheet extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        _CustomerInfo(),
+        _CustomerInfo(ride: ride),
         const SizedBox(height: 6),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -266,11 +279,16 @@ class _ArrivedSheet extends StatelessWidget {
             children: [
               const Icon(Icons.location_on_rounded, color: AppColors.mapPickup, size: 14),
               const SizedBox(width: 6),
-              Text('Koramangala, Bangalore', style: AppTextStyles.bodyMd),
-              const Spacer(),
+              Expanded(
+                child: Text(ride.pickup.name, style: AppTextStyles.bodyMd,
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
               const Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.textLight),
               const SizedBox(width: 6),
-              Text('MG Road', style: AppTextStyles.bodyMd),
+              Expanded(
+                child: Text(ride.drop.name, style: AppTextStyles.bodyMd,
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
             ],
           ),
         ),
@@ -283,8 +301,9 @@ class _ArrivedSheet extends StatelessWidget {
 }
 
 class _OnTripSheet extends StatelessWidget {
+  final RideModel ride;
   final VoidCallback onComplete;
-  const _OnTripSheet({super.key, required this.onComplete});
+  const _OnTripSheet({super.key, required this.ride, required this.onComplete});
 
   @override
   Widget build(BuildContext context) {
@@ -306,7 +325,8 @@ class _OnTripSheet extends StatelessWidget {
                         style: AppTextStyles.labelSm.copyWith(color: AppColors.success)),
                   ),
                   const SizedBox(height: 6),
-                  Text('MG Road, Bangalore', style: AppTextStyles.h4),
+                  Text(ride.drop.name, style: AppTextStyles.h4,
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 2),
                   Row(children: [
                     const Icon(Icons.navigation_rounded,
@@ -320,14 +340,14 @@ class _OnTripSheet extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text('₹45', style: AppTextStyles.h2.copyWith(color: AppColors.success)),
+                Text('₹${ride.fare}', style: AppTextStyles.h2.copyWith(color: AppColors.success)),
                 Text('Estimated Fare', style: AppTextStyles.caption),
               ],
             ),
           ],
         ),
         const SizedBox(height: 14),
-        _CustomerInfo(),
+        _CustomerInfo(ride: ride),
         const SizedBox(height: 14),
         AppGradientButton(
           label: 'End Trip',
@@ -341,10 +361,11 @@ class _OnTripSheet extends StatelessWidget {
 }
 
 class _CompletedSheet extends StatelessWidget {
+  final RideModel ride;
   final bool cashReceived;
   final VoidCallback onCashReceived;
   const _CompletedSheet({
-    super.key, required this.cashReceived, required this.onCashReceived,
+    super.key, required this.ride, required this.cashReceived, required this.onCashReceived,
   });
 
   @override
@@ -378,16 +399,16 @@ class _CompletedSheet extends StatelessWidget {
           ),
           child: Column(
             children: [
-              _FareRow('Total Fare', '₹45'),
-              _FareRow('Your Earnings', '₹45', green: true),
-              _FareRow('Cash Collected', '₹45'),
+              _FareRow('Total Fare', '₹${ride.fare}'),
+              _FareRow('Your Earnings', '₹${ride.fare}', green: true),
+              _FareRow('Cash Collected', '₹${ride.fare}'),
             ],
           ),
         ),
         const SizedBox(height: 14),
 
         // Customer info + rating
-        _CustomerInfo(),
+        _CustomerInfo(ride: ride),
         const SizedBox(height: 6),
         Row(
           children: [
@@ -450,6 +471,9 @@ class _BaseSheet extends StatelessWidget {
 }
 
 class _CustomerInfo extends StatelessWidget {
+  final RideModel ride;
+  const _CustomerInfo({required this.ride});
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -464,8 +488,9 @@ class _CustomerInfo extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Arjun Kumar', style: AppTextStyles.h5),
-              Text('KA 03 JE 1234 · Honda Active', style: AppTextStyles.bodySm),
+              Text('Customer', style: AppTextStyles.h5),
+              Text('${ride.serviceType.label} · ${ride.paymentMethod}',
+                  style: AppTextStyles.bodySm),
             ],
           ),
         ),

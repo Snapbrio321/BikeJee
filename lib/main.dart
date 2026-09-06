@@ -7,6 +7,7 @@ import 'providers/location_provider.dart';
 import 'providers/ride_provider.dart';
 import 'providers/wallet_provider.dart';
 import 'providers/bookings_provider.dart';
+import 'providers/driver_provider.dart';
 import 'features/auth/screens/splash_screen.dart';
 import 'features/auth/screens/onboarding_screen.dart';
 import 'features/auth/screens/role_select_screen.dart';
@@ -42,6 +43,9 @@ class BikeJeeApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => RideProvider()),
         ChangeNotifierProvider(create: (_) => WalletProvider()..load()),
         ChangeNotifierProvider(create: (_) => BookingsProvider()..load()),
+        // Lazily created — only initializes (socket + stats) when the driver
+        // dashboard mounts and calls init().
+        ChangeNotifierProvider(create: (_) => DriverProvider()),
       ],
       child: MaterialApp(
         title: 'BikeJee',

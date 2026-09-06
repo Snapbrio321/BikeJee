@@ -1,10 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../data/models/ride_model.dart';
+import '../../../data/repositories/driver_repository.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../providers/driver_provider.dart';
 
 class DriverDashboardScreen extends StatefulWidget {
   final VoidCallback? onGoOnline;
@@ -24,11 +29,8 @@ class DriverDashboardScreen extends StatefulWidget {
 
 class _DriverDashboardScreenState extends State<DriverDashboardScreen>
     with SingleTickerProviderStateMixin {
-  bool _isOnline = false;
   late AnimationController _pulseCtrl;
   late Animation<double> _pulse;
-  Timer? _rideTimer;
-  bool _newRideRequest = false;
 
   @override
   void initState() {
@@ -38,42 +40,42 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen>
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
     _pulse = CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut);
+    // Load dashboard stats + connect socket once.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<DriverProvider>().init();
+    });
   }
 
-  void _toggleOnline() {
-    setState(() => _isOnline = !_isOnline);
-    if (_isOnline) {
-      // Simulate incoming ride after 4 seconds
-      _rideTimer = Timer(const Duration(seconds: 4), () {
-        if (mounted && _isOnline) {
-          setState(() => _newRideRequest = true);
-        }
-      });
+  Future<void> _toggleOnline() async {
+    final driver = context.read<DriverProvider>();
+    if (driver.isOnline) {
+      await driver.goOffline();
     } else {
-      _rideTimer?.cancel();
-      setState(() => _newRideRequest = false);
+      await driver.goOnline();
     }
   }
 
   @override
   void dispose() {
     _pulseCtrl.dispose();
-    _rideTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final driver = context.watch<DriverProvider>();
+    final stats = driver.stats;
+
+    // When a dispatched ride is accepted it becomes the active ride — hand off
+    // to the ride-flow screen.
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(
         children: [
           CustomScrollView(
             slivers: [
-              // App bar
               SliverToBoxAdapter(child: _buildHeader()),
 
-              // Plan active banner
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -81,12 +83,12 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen>
                 ),
               ),
 
-              // Online toggle
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: _OnlineToggle(
-                    isOnline: _isOnline,
+                    isOnline: driver.isOnline,
+                    busy: driver.busy,
                     onToggle: _toggleOnline,
                     pulse: _pulse,
                   ),
@@ -95,17 +97,16 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen>
 
               const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-              // Today's stats
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: _TodaySummary(),
+                  child: _TodaySummary(stats: stats),
                 ),
               ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-              // Recent trips
+              // Recent trips (from backend stats, empty state otherwise)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -114,10 +115,13 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen>
                     children: [
                       Text("Today's Trips", style: AppTextStyles.h4),
                       const SizedBox(height: 10),
-                      ..._recentTrips.map((t) => Padding(
-                        padding: const EdgeInsets.only(bottom: 10),
-                        child: _TripTile(trip: t),
-                      )),
+                      if (stats.recentTrips.isEmpty)
+                        _EmptyTrips()
+                      else
+                        ...stats.recentTrips.map((r) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _TripTile(ride: r),
+                            )),
                     ],
                   ),
                 ),
@@ -127,14 +131,15 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen>
             ],
           ),
 
-          // New Ride Request overlay
-          if (_newRideRequest)
+          // Incoming ride request overlay — driven by real dispatch
+          if (driver.hasIncoming)
             _NewRideOverlay(
-              onAccept: () {
-                setState(() => _newRideRequest = false);
-                widget.onNewRide?.call();
+              ride: driver.incomingRide!,
+              onAccept: () async {
+                final ok = await driver.acceptIncoming();
+                if (ok) widget.onNewRide?.call();
               },
-              onDecline: () => setState(() => _newRideRequest = false),
+              onDecline: () => driver.declineIncoming(),
             ),
         ],
       ),
@@ -142,6 +147,11 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen>
   }
 
   Widget _buildHeader() {
+    final user = context.watch<AuthProvider>().user;
+    final name = (user?.name.isNotEmpty ?? false) ? user!.name : 'Driver';
+    final rating = user != null && user.rating > 0
+        ? user.rating.toStringAsFixed(1)
+        : 'New';
     return Container(
       padding: EdgeInsets.fromLTRB(
           20, MediaQuery.of(context).padding.top + 12, 20, 20),
@@ -161,8 +171,8 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Welcome back,', style: AppTextStyles.bodySmWhite),
-                  Text('Arjun Kumar',
-                      style: GoogleFonts.poppins(
+                  Text(name,
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
@@ -186,23 +196,16 @@ class _DriverDashboardScreenState extends State<DriverDashboardScreen>
           const SizedBox(height: 16),
           Row(
             children: [
-              _StatPill(Icons.electric_bike_rounded, 'KA 03 JE 1234', Colors.white38),
+              _StatPill(Icons.star_rounded, rating, AppColors.starColor),
               const SizedBox(width: 10),
-              _StatPill(Icons.star_rounded, '4.8', AppColors.starColor),
-              const SizedBox(width: 10),
-              _StatPill(Icons.cancel_outlined, '2%', AppColors.error),
+              _StatPill(Icons.electric_bike_rounded,
+                  '${user?.totalRides ?? 0} rides', Colors.white38),
             ],
           ),
         ],
       ),
     );
   }
-
-  static final _recentTrips = [
-    _Trip('Koramangala → MG Road', '₹45', '10:30 AM', true),
-    _Trip('HSR Layout → Whitefield', '₹120', '08:15 AM', true),
-    _Trip('BTM Layout → Silk Board', '₹35', '07:00 AM', true),
-  ];
 }
 
 class _HeaderIcon extends StatelessWidget {
@@ -317,9 +320,15 @@ class _PlanBanner extends StatelessWidget {
 
 class _OnlineToggle extends StatelessWidget {
   final bool isOnline;
+  final bool busy;
   final VoidCallback onToggle;
   final Animation<double> pulse;
-  const _OnlineToggle({required this.isOnline, required this.onToggle, required this.pulse});
+  const _OnlineToggle({
+    required this.isOnline,
+    required this.busy,
+    required this.onToggle,
+    required this.pulse,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -361,7 +370,7 @@ class _OnlineToggle extends StatelessWidget {
             ),
           ),
           GestureDetector(
-            onTap: onToggle,
+            onTap: busy ? null : onToggle,
             child: AnimatedBuilder(
               animation: pulse,
               builder: (_, child) {
@@ -393,11 +402,17 @@ class _OnlineToggle extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Icon(
-                  isOnline ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                  color: isOnline ? AppColors.success : Colors.white,
-                  size: 34,
-                ),
+                child: busy
+                    ? const Padding(
+                        padding: EdgeInsets.all(20),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3, color: AppColors.primary),
+                      )
+                    : Icon(
+                        isOnline ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                        color: isOnline ? AppColors.success : Colors.white,
+                        size: 34,
+                      ),
               ),
             ),
           ),
@@ -408,6 +423,9 @@ class _OnlineToggle extends StatelessWidget {
 }
 
 class _TodaySummary extends StatelessWidget {
+  final DriverStats stats;
+  const _TodaySummary({required this.stats});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -417,21 +435,21 @@ class _TodaySummary extends StatelessWidget {
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _SummaryCard('₹1,420', 'Total Earnings',
+            Expanded(child: _SummaryCard('₹${stats.todayEarnings}', 'Total Earnings',
                 Icons.currency_rupee_rounded, AppColors.success)),
             const SizedBox(width: 10),
-            Expanded(child: _SummaryCard('12', 'Rides Completed',
+            Expanded(child: _SummaryCard('${stats.ridesCompleted}', 'Rides Completed',
                 Icons.electric_bike_rounded, AppColors.primary)),
           ],
         ),
         const SizedBox(height: 10),
         Row(
           children: [
-            Expanded(child: _SummaryCard('₹150', 'Incentives',
+            Expanded(child: _SummaryCard('₹${stats.incentives}', 'Incentives',
                 Icons.star_rounded, AppColors.warning)),
             const SizedBox(width: 10),
-            Expanded(child: _SummaryCard('2%', 'Cancellation',
-                Icons.cancel_outlined, AppColors.error)),
+            Expanded(child: _SummaryCard('${stats.cancellationRate.toStringAsFixed(0)}%',
+                'Cancellation', Icons.cancel_outlined, AppColors.error)),
           ],
         ),
       ],
@@ -470,7 +488,7 @@ class _SummaryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(value,
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.plusJakartaSans(
                       fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark,
                     )),
                 Text(label, style: AppTextStyles.caption),
@@ -484,11 +502,15 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _TripTile extends StatelessWidget {
-  final _Trip trip;
-  const _TripTile({required this.trip});
+  final RideModel ride;
+  const _TripTile({required this.ride});
 
   @override
   Widget build(BuildContext context) {
+    final route = '${ride.pickup.name} → ${ride.drop.name}';
+    final time = ride.completedAt != null
+        ? TimeOfDay.fromDateTime(ride.completedAt!).format(context)
+        : '';
     return AppCard(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
@@ -507,16 +529,17 @@ class _TripTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(trip.route, style: AppTextStyles.h5, maxLines: 1,
+                Text(route, style: AppTextStyles.h5, maxLines: 1,
                     overflow: TextOverflow.ellipsis),
-                Text(trip.time, style: AppTextStyles.bodySm),
+                Text(time, style: AppTextStyles.bodySm),
               ],
             ),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(trip.fare, style: AppTextStyles.priceSmall.copyWith(color: AppColors.success)),
+              Text('₹${ride.fare}',
+                  style: AppTextStyles.priceSmall.copyWith(color: AppColors.success)),
               const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 14),
             ],
           ),
@@ -526,10 +549,40 @@ class _TripTile extends StatelessWidget {
   }
 }
 
+class _EmptyTrips extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 28),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border, width: 0.8),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.electric_bike_outlined,
+              color: AppColors.textLight, size: 32),
+          const SizedBox(height: 8),
+          Text('No trips yet today', style: AppTextStyles.bodyMd),
+          const SizedBox(height: 2),
+          Text('Go online to start earning', style: AppTextStyles.caption),
+        ],
+      ),
+    );
+  }
+}
+
 class _NewRideOverlay extends StatefulWidget {
+  final RideModel ride;
   final VoidCallback onAccept;
   final VoidCallback onDecline;
-  const _NewRideOverlay({required this.onAccept, required this.onDecline});
+  const _NewRideOverlay({
+    required this.ride,
+    required this.onAccept,
+    required this.onDecline,
+  });
 
   @override
   State<_NewRideOverlay> createState() => _NewRideOverlayState();
@@ -631,11 +684,12 @@ class _NewRideOverlayState extends State<_NewRideOverlay>
                                       style: AppTextStyles.labelSm.copyWith(color: AppColors.primary)),
                                 ),
                                 const SizedBox(width: 8),
-                                Text('Bike', style: AppTextStyles.labelMd.copyWith(color: AppColors.textMedium)),
+                                Text(widget.ride.serviceType.label,
+                                    style: AppTextStyles.labelMd.copyWith(color: AppColors.textMedium)),
                               ],
                             ),
                             const SizedBox(height: 4),
-                            Text('1.2 km away',
+                            Text('${widget.ride.distanceKm.toStringAsFixed(1)} km trip',
                                 style: AppTextStyles.h5.copyWith(color: AppColors.info)),
                           ],
                         ),
@@ -654,10 +708,10 @@ class _NewRideOverlayState extends State<_NewRideOverlay>
                     child: Column(
                       children: [
                         _RideRow(Icons.radio_button_checked_rounded,
-                            AppColors.mapPickup, 'Koramangala, Bangalore'),
+                            AppColors.mapPickup, widget.ride.pickup.name),
                         const SizedBox(height: 6),
                         _RideRow(Icons.location_on_rounded,
-                            AppColors.mapDrop, 'MG Road, Bangalore'),
+                            AppColors.mapDrop, widget.ride.drop.name),
                       ],
                     ),
                   ),
@@ -668,7 +722,7 @@ class _NewRideOverlayState extends State<_NewRideOverlay>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text('Estimated Fare', style: AppTextStyles.bodyMd),
-                      Text('₹45',
+                      Text('₹${widget.ride.fare}',
                           style: AppTextStyles.h3.copyWith(color: AppColors.success)),
                     ],
                   ),
@@ -725,8 +779,4 @@ class _RideRow extends StatelessWidget {
   }
 }
 
-class _Trip {
-  final String route, fare, time;
-  final bool completed;
-  const _Trip(this.route, this.fare, this.time, this.completed);
-}
+

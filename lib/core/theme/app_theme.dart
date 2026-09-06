@@ -16,7 +16,7 @@ class AppTheme {
         brightness: Brightness.light,
       ),
       scaffoldBackgroundColor: AppColors.background,
-      fontFamily: GoogleFonts.poppins().fontFamily,
+      fontFamily: GoogleFonts.plusJakartaSans().fontFamily,
       textTheme: _buildTextTheme(),
       appBarTheme: _buildAppBarTheme(),
       elevatedButtonTheme: _buildElevatedButtonTheme(),
@@ -40,29 +40,29 @@ class AppTheme {
         unselectedLabelColor: AppColors.textLight,
         indicatorColor: AppColors.primary,
         indicatorSize: TabBarIndicatorSize.label,
-        labelStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w400),
+        labelStyle: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w400),
       ),
     );
   }
 
   static TextTheme _buildTextTheme() {
     return TextTheme(
-      displayLarge: GoogleFonts.poppins(fontSize: 32, fontWeight: FontWeight.w800, color: AppColors.textDark),
-      displayMedium: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.textDark),
-      displaySmall: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.textDark),
-      headlineLarge: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textDark),
-      headlineMedium: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textDark),
-      headlineSmall: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark),
-      titleLarge: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark),
-      titleMedium: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textDark),
-      titleSmall: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textMedium),
-      bodyLarge: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.textDark),
-      bodyMedium: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w400, color: AppColors.textMedium),
-      bodySmall: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textLight),
-      labelLarge: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
-      labelMedium: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium),
-      labelSmall: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textLight),
+      displayLarge: GoogleFonts.plusJakartaSans(fontSize: 32, fontWeight: FontWeight.w800, color: AppColors.textDark),
+      displayMedium: GoogleFonts.plusJakartaSans(fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.textDark),
+      displaySmall: GoogleFonts.plusJakartaSans(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.textDark),
+      headlineLarge: GoogleFonts.plusJakartaSans(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textDark),
+      headlineMedium: GoogleFonts.plusJakartaSans(fontSize: 20, fontWeight: FontWeight.w600, color: AppColors.textDark),
+      headlineSmall: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textDark),
+      titleLarge: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textDark),
+      titleMedium: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.w500, color: AppColors.textDark),
+      titleSmall: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textMedium),
+      bodyLarge: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.w400, color: AppColors.textDark),
+      bodyMedium: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w400, color: AppColors.textMedium),
+      bodySmall: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textLight),
+      labelLarge: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textDark),
+      labelMedium: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textMedium),
+      labelSmall: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w500, color: AppColors.textLight),
     );
   }
 
@@ -73,7 +73,7 @@ class AppTheme {
       scrolledUnderElevation: 0,
       centerTitle: false,
       iconTheme: const IconThemeData(color: Colors.white, size: 22),
-      titleTextStyle: GoogleFonts.poppins(
+      titleTextStyle: GoogleFonts.plusJakartaSans(
         fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white,
       ),
       systemOverlayStyle: const SystemUiOverlayStyle(
@@ -91,7 +91,7 @@ class AppTheme {
         elevation: 0,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700),
+        textStyle: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.w700),
         minimumSize: const Size(double.infinity, 52),
       ),
     );
@@ -104,7 +104,7 @@ class AppTheme {
         side: const BorderSide(color: AppColors.primary, width: 1.5),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        textStyle: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600),
+        textStyle: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.w600),
         minimumSize: const Size(double.infinity, 52),
       ),
     );
@@ -114,7 +114,7 @@ class AppTheme {
     return TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: AppColors.primary,
-        textStyle: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+        textStyle: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -140,8 +140,8 @@ class AppTheme {
         borderRadius: BorderRadius.circular(14),
         borderSide: const BorderSide(color: AppColors.error),
       ),
-      hintStyle: GoogleFonts.poppins(fontSize: 14, color: AppColors.textLight),
-      labelStyle: GoogleFonts.poppins(fontSize: 14, color: AppColors.textMedium),
+      hintStyle: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppColors.textLight),
+      labelStyle: GoogleFonts.plusJakartaSans(fontSize: 14, color: AppColors.textMedium),
     );
   }
 
@@ -164,8 +164,8 @@ class AppTheme {
       unselectedItemColor: AppColors.navInactive,
       type: BottomNavigationBarType.fixed,
       elevation: 0,
-      selectedLabelStyle: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700),
-      unselectedLabelStyle: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w400),
+      selectedLabelStyle: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w700),
+      unselectedLabelStyle: GoogleFonts.plusJakartaSans(fontSize: 11, fontWeight: FontWeight.w400),
     );
   }
 
@@ -173,7 +173,7 @@ class AppTheme {
     return ChipThemeData(
       backgroundColor: AppColors.greyBg,
       selectedColor: AppColors.primary.withOpacity(0.12),
-      labelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500),
+      labelStyle: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w500),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       side: BorderSide.none,

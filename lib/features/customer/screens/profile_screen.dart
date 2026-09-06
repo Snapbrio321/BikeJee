@@ -225,7 +225,7 @@ class _Stat extends StatelessWidget {
       child: Column(
         children: [
           Text(value,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.plusJakartaSans(
                   fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.primary)),
           const SizedBox(height: 2),
           Text(label, style: AppTextStyles.caption, textAlign: TextAlign.center),

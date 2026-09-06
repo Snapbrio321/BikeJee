@@ -149,7 +149,7 @@ class _DriverWalletScreenState extends State<DriverWalletScreen>
             animation: _anim,
             builder: (_, __) => Text(
               '₹${(_balance * _anim.value).toStringAsFixed(0)}',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 38, fontWeight: FontWeight.w800, color: Colors.white,
               ),
             ),
@@ -334,10 +334,10 @@ class _AddMoneySheet extends StatelessWidget {
             const SizedBox(height: 16),
             TextField(
               keyboardType: TextInputType.number,
-              style: GoogleFonts.poppins(fontSize: 26, fontWeight: FontWeight.w700),
+              style: GoogleFonts.plusJakartaSans(fontSize: 26, fontWeight: FontWeight.w700),
               decoration: InputDecoration(
                 prefixText: '₹  ',
-                prefixStyle: GoogleFonts.poppins(
+                prefixStyle: GoogleFonts.plusJakartaSans(
                     fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.primary),
                 hintText: '0',
                 filled: true, fillColor: AppColors.greyBg,
@@ -388,10 +388,10 @@ class _WithdrawSheet extends StatelessWidget {
                   ? TextEditingController(text: initialAmount.toInt().toString())
                   : null,
               keyboardType: TextInputType.number,
-              style: GoogleFonts.poppins(fontSize: 26, fontWeight: FontWeight.w700),
+              style: GoogleFonts.plusJakartaSans(fontSize: 26, fontWeight: FontWeight.w700),
               decoration: InputDecoration(
                 prefixText: '₹  ',
-                prefixStyle: GoogleFonts.poppins(
+                prefixStyle: GoogleFonts.plusJakartaSans(
                     fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.primary),
                 hintText: '0',
                 filled: true, fillColor: AppColors.greyBg,

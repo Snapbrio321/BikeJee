@@ -42,7 +42,7 @@ class BikeJeeLogo extends StatelessWidget {
             children: [
               TextSpan(
                 text: 'Bike',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 20 * size,
                   fontWeight: FontWeight.w800,
                   color: darkBg ? Colors.white : AppColors.secondary,
@@ -51,7 +51,7 @@ class BikeJeeLogo extends StatelessWidget {
               ),
               TextSpan(
                 text: 'Jee',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 20 * size,
                   fontWeight: FontWeight.w800,
                   color: AppColors.primary,
@@ -103,7 +103,7 @@ class BikeJeeLogoCenter extends StatelessWidget {
             children: [
               TextSpan(
                 text: 'Bike',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 30 * size,
                   fontWeight: FontWeight.w800,
                   color: darkBg ? Colors.white : AppColors.secondary,
@@ -112,7 +112,7 @@ class BikeJeeLogoCenter extends StatelessWidget {
               ),
               TextSpan(
                 text: 'Jee',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.plusJakartaSans(
                   fontSize: 30 * size,
                   fontWeight: FontWeight.w800,
                   color: AppColors.primary,
@@ -125,7 +125,7 @@ class BikeJeeLogoCenter extends StatelessWidget {
         SizedBox(height: 5 * size),
         Text(
           'Ride Fast. Deliver Smart.',
-          style: GoogleFonts.poppins(
+          style: GoogleFonts.plusJakartaSans(
             fontSize: 12 * size,
             color: darkBg ? Colors.white54 : AppColors.textLight,
             fontWeight: FontWeight.w400,

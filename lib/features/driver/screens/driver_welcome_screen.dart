@@ -205,7 +205,7 @@ class _DriverWelcomeScreenState extends State<DriverWelcomeScreen>
                                 Text(
                                   'Welcome to\nBikeJee Partner',
                                   textAlign: TextAlign.center,
-                                  style: GoogleFonts.poppins(
+                                  style: GoogleFonts.plusJakartaSans(
                                     fontSize: 26,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white,

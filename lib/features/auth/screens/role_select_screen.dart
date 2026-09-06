@@ -63,7 +63,7 @@ class _RoleSelectScreenState extends State<RoleSelectScreen>
                     Text(
                       'How would you like\nto use BikeJee?',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
@@ -204,7 +204,7 @@ class _RoleCardState extends State<_RoleCard>
                   children: [
                     Text(
                       widget.title,
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,

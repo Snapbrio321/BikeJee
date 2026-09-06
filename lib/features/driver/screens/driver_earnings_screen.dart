@@ -133,8 +133,8 @@ class _DriverEarningsScreenState extends State<DriverEarningsScreen>
         indicatorWeight: 3,
         labelColor: AppColors.primary,
         unselectedLabelColor: AppColors.textMedium,
-        labelStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
+        labelStyle: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: GoogleFonts.plusJakartaSans(fontSize: 13),
         tabs: _tabs.map((t) => Tab(text: t)).toList(),
       ),
     );
@@ -151,7 +151,7 @@ class _EarStat extends StatelessWidget {
     return Column(
       children: [
         Text(value,
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.plusJakartaSans(
               fontSize: 16, fontWeight: FontWeight.w700, color: color,
             )),
         const SizedBox(height: 2),
@@ -192,7 +192,7 @@ class _EarningsTab extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(totalLabel,
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.plusJakartaSans(
                             fontSize: 26, fontWeight: FontWeight.w800,
                             color: AppColors.success,
                           )),

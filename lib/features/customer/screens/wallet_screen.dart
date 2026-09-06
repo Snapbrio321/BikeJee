@@ -188,7 +188,7 @@ class _WalletHeader extends StatelessWidget {
             animation: anim,
             builder: (_, __) => Text(
               '₹${(balance * anim.value).toStringAsFixed(0)}',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 40,
                 fontWeight: FontWeight.w800,
                 color: Colors.white,
@@ -407,10 +407,10 @@ class _AddMoneySheetState extends State<_AddMoneySheet> {
             TextField(
               controller: _ctrl,
               keyboardType: TextInputType.number,
-              style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.w700),
+              style: GoogleFonts.plusJakartaSans(fontSize: 28, fontWeight: FontWeight.w700),
               decoration: InputDecoration(
                 prefixText: '₹  ',
-                prefixStyle: GoogleFonts.poppins(
+                prefixStyle: GoogleFonts.plusJakartaSans(
                     fontSize: 28, fontWeight: FontWeight.w700, color: AppColors.primary),
                 hintText: '0',
                 filled: true,

@@ -223,7 +223,7 @@ class _OnboardingPageState extends State<_OnboardingPage>
             Text(
               p.title,
               textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.plusJakartaSans(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textDark,

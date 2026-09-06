@@ -46,8 +46,8 @@ class _DriverProfileScreenState extends State<DriverProfileScreen>
                 indicatorWeight: 3,
                 labelColor: AppColors.primary,
                 unselectedLabelColor: AppColors.textMedium,
-                labelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
-                unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12),
+                labelStyle: GoogleFonts.plusJakartaSans(fontSize: 12, fontWeight: FontWeight.w600),
+                unselectedLabelStyle: GoogleFonts.plusJakartaSans(fontSize: 12),
                 tabs: const [
                   Tab(text: 'Profile'),
                   Tab(text: 'My Vehicle'),

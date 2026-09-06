@@ -107,9 +107,9 @@ class _OffersScreenState extends State<OffersScreen>
                   indicatorWeight: 3,
                   labelColor: AppColors.primary,
                   unselectedLabelColor: AppColors.textMedium,
-                  labelStyle: GoogleFonts.poppins(
+                  labelStyle: GoogleFonts.plusJakartaSans(
                       fontSize: 13, fontWeight: FontWeight.w600),
-                  unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13),
+                  unselectedLabelStyle: GoogleFonts.plusJakartaSans(fontSize: 13),
                   tabs: _tabs.map((t) => Tab(text: t)).toList(),
                 ),
               ),
@@ -275,7 +275,7 @@ class _OfferCardState extends State<_OfferCard> {
                         children: [
                           Text(
                             o.title,
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.plusJakartaSans(
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
                               color: o.color,

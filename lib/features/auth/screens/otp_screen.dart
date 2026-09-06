@@ -216,7 +216,7 @@ class _OtpScreenState extends State<OtpScreen>
                       textAlign: TextAlign.center,
                       keyboardType: TextInputType.number,
                       maxLength: 1,
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.plusJakartaSans(
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
                         color: _isError ? AppColors.error : AppColors.textDark,

@@ -127,7 +127,7 @@ class _RideCompletedScreenState extends State<RideCompletedScreen>
                           children: [
                             Text('Total Fare', style: AppTextStyles.h4),
                             Text('₹45',
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.plusJakartaSans(
                                   fontSize: 26,
                                   fontWeight: FontWeight.w800,
                                   color: AppColors.primary,

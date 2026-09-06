@@ -197,7 +197,7 @@ class _PlanSelectScreen extends StatelessWidget {
                                   children: [
                                     TextSpan(
                                       text: plan.price,
-                                      style: GoogleFonts.poppins(
+                                      style: GoogleFonts.plusJakartaSans(
                                         fontSize: 26, fontWeight: FontWeight.w800,
                                         color: isSelected ? AppColors.primary : AppColors.textDark,
                                       ),
